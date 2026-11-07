@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired Texture Analysis-by-Synthesis</title>
+<meta name="description" content="GramStatTexNet (GSTN) combines the multi-scale Gabor filters of classical texture models with Gram-matrix correlations, giving an interpretable, compact texture representation that extends to peripheral vision and dynamic textures. NeurIPS 2026.">
+<meta property="og:title" content="GramStatTexNet (NeurIPS 2026)">
+<meta property="og:description" content="Efficient, interpretable, and neuro-inspired texture analysis-by-synthesis.">
+<meta property="og:image" content="https://vdutell.github.io/gstn/static/images/fig2_syntheses.jpg">
+<meta property="og:url" content="https://vdutell.github.io/gstn/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{
+    --ink:#1b1f1d; --muted:#5b625e; --line:#e3e6e4; --bg:#ffffff; --soft:#f5f7f5;
+    --accent:#2f6d3f; --accent-soft:#e8f1ea; --code:#f3f4f3;
+    --max:980px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+  .narrow{max-width:780px;margin:0 auto}
+
+  /* Header */
+  header.hero{padding:64px 0 28px;text-align:center}
+  .venue{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);padding:4px 12px;border-radius:999px;margin-bottom:18px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:clamp(30px,4.6vw,46px);
+    line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+  h1 .sub{display:block;font-size:.58em;font-weight:400;color:var(--muted);margin-top:10px;letter-spacing:0}
+  .authors{margin:26px auto 6px;max-width:820px;font-size:18px;line-height:1.9}
+  .authors span{white-space:nowrap;margin:0 9px}
+  .authors sup,.affils sup{font-size:.68em;color:var(--muted);margin-left:1px}
+  .affils{color:var(--muted);font-size:15px;margin-bottom:4px}
+  .affils span{margin:0 10px;white-space:nowrap}
+  .links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:26px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;
+    background:var(--ink);color:#fff;font-size:15px;font-weight:500;transition:transform .12s, background .12s}
+  .btn:hover{text-decoration:none;background:#000;transform:translateY(-1px)}
+  .btn svg{width:17px;height:17px;fill:currentColor}
+  .btn.disabled{background:#c9cdca;color:#fff;cursor:default;pointer-events:none}
+  .btn small{font-size:12px;opacity:.85;font-weight:400}
+
+  /* Sections */
+  section{padding:38px 0}
+  section + section{border-top:1px solid var(--line)}
+  h2{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:28px;margin:0 0 16px;text-align:center}
+  h3{font-size:19px;margin:30px 0 8px}
+  p{margin:0 0 14px}
+  .lead{font-size:18px}
+  figure{margin:22px 0 8px}
+  figure img{display:block;width:100%;height:auto;border-radius:6px;background:var(--soft)}
+  figure a.zoom{display:block;cursor:zoom-in}
+  figcaption{font-size:14.5px;color:var(--muted);line-height:1.55;margin-top:10px}
+  figcaption b{color:var(--ink)}
+  .teaser figure{margin-top:6px}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:26px 0 8px}
+  .stat{background:var(--soft);border-radius:10px;padding:18px 18px 16px}
+  .stat .n{font-family:Georgia,serif;font-size:30px;font-weight:600;color:var(--accent);line-height:1.1}
+  .stat .l{font-size:14.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+
+  /* videos */
+  .vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:22px}
+  .vid{background:var(--soft);border-radius:10px;padding:10px 10px 8px}
+  .vid .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .vid video,.vid .ph{width:100%;aspect-ratio:1/1;border-radius:5px;background:#dfe3e0;display:block;object-fit:cover}
+  .vid .ph{display:flex;align-items:center;justify-content:center;text-align:center;font-size:11.5px;color:var(--muted);padding:8px;line-height:1.35}
+  .vid .lab{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12.5px;color:var(--muted);text-align:center;margin-top:4px}
+  .vid .name{font-weight:600;font-size:14.5px;margin:0 2px 6px;text-transform:capitalize}
+
+  /* table */
+  .tbl{overflow-x:auto;margin:18px 0 6px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px}
+  th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-weight:600;border-bottom:2px solid var(--ink)}
+  tr.grp td{font-weight:600;color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;padding-top:14px;text-align:left}
+  td.win{font-weight:700}
+
+  /* bibtex */
+  .bib{position:relative}
+  pre{background:var(--code);border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:13.5px;line-height:1.55;margin:0}
+  .copy{position:absolute;top:10px;right:10px;border:1px solid var(--line);background:#fff;border-radius:6px;
+    font-size:12.5px;padding:4px 10px;cursor:pointer;color:var(--ink)}
+  .copy:hover{background:var(--soft)}
+
+  footer{padding:30px 0 50px;color:var(--muted);font-size:13.5px;text-align:center;border-top:1px solid var(--line)}
+
+  /* lightbox */
+  #lb{position:fixed;inset:0;background:rgba(10,12,11,.92);display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out;padding:24px}
+  #lb.on{display:flex}
+  #lb img{max-width:100%;max-height:100%;border-radius:4px;background:#fff}
+
+  @media (max-width:600px){
+    body{font-size:16px}
+    header.hero{padding-top:40px}
+    .authors{font-size:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero wrap">
+  <div class="venue">NeurIPS 2026</div>
+  <h1>GramStatTexNet
+    <span class="sub">Efficient, Interpretable, and Neuro-Inspired Texture Analysis-by-Synthesis</span>
+  </h1>
+
+  <div class="authors">
+    <span><a href="https://vdutell.github.io/">Vasha DuTell</a><sup>1,2</sup></span>
+    <span>Zeyu Yun<sup>2</sup></span>
+    <span>Anne Harrington<sup>1</sup></span>
+    <span>Michael Y-S. Fang<sup>4</sup></span>
+    <span>Mark Hamilton<sup>1</sup></span>
+    <span>Christian Kovesdi<sup>1</sup></span>
+    <span>Edward H. Adelson<sup>1</sup></span>
+    <span><a href="https://billf.mit.edu/">William T. Freeman</a><sup>1</sup></span>
+    <span><a href="https://www.csail.mit.edu/person/ruth-rosenholtz">Ruth Rosenholtz</a><sup>1,3</sup></span>
+  </div>
+  <div class="affils">
+    <span><sup>1</sup>MIT CSAIL</span>
+    <span><sup>2</sup>UC Berkeley</span>
+    <span><sup>3</sup>NVIDIA</span>
+    <span><sup>4</sup>Spectacular Labs</span>
+  </div>
+
+  <div class="links">
+    <!-- TODO: point these at the real URLs once they exist, and remove class="disabled". -->
+    <a class="btn" href="static/gstn_neurips2026.pdf">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm-1 7V3.5L18.5 9z"/></svg>Paper</a>
+    <a class="btn disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4zm0 5h10v2H4z"/></svg>arXiv <small>soon</small></a>
+    <a class="btn disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>Code <small>soon</small></a>
+    <a class="btn" href="#bibtex">
+      <svg viewBox="0 0 24 24"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>BibTeX</a>
+  </div>
+</header>
+
+<section class="teaser wrap">
+  <figure>
+    <a class="zoom" href="static/images/fig2_syntheses.jpg"><img src="static/images/fig2_syntheses.jpg" alt="Grid of texture syntheses. Columns are DTD categories (chequered, striped, polka-dotted, honeycombed, cracked, lacelike, fibrous, bumpy, sprinkled, pleated, swirly); rows compare the target with GSTN-zpad, GSTN-wrap, muNCA, Portilla and Simoncelli, Ustyuzhaninov, and Gatys."></a>
+    <figcaption><b>Texture syntheses across DTD categories.</b> Top row: target textures. GSTN matches the Gramian of multi-scale Gabor filters using 29K statistics, compared with 8K hand-picked statistics for Portilla &amp; Simoncelli and 177K–852K for the deep and random-filter Gram methods (Gatys, Ustyuzhaninov). GSTN-zpad uses zero padding to avoid wrap-around artifacts; GSTN-wrap uses a wrapped Fourier transform and runs about 2× faster.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap">
+  <div class="narrow">
+    <h2>Abstract</h2>
+    <p>Deep networks achieve high realism in texture synthesis but often rely on opaque, over-parameterized representations that have limited direct connection to biological vision. Neuroscience-informed pyramid models are interpretable, compact, and biologically inspired, but rely on small, hand-curated statistics sets that are difficult to generalize or extend. We introduce GramStatTexNet, a hybrid analysis-by-synthesis framework that combines the multi-scale Gabor filter structure of classical models with the flexibility of Gramian-based correlations, organized into structured filter families. This structured representation enables analyses that are challenging for deep-feature methods: each statistic carries a named filter-family identity, allowing us to decompose synthesis fidelity into per-family contributions and to learn an interpretable, low-dimensional embedding that preserves perceptual texture content. We compare our framework to classical and deep texture-synthesis baselines across diverse texture categories, and on multiple perceptual metrics, highlighting the compactness and interpretability advantages of this hybrid representation, alongside competitive synthesis quality. This same framework extends naturally to peripheral textures via spatial pooling, and to dynamic textures using a spatiotemporal filter bank. GramStatTexNet provides a unified, interpretable framework for analyzing and modeling visual information with natural extensions across space, time, and eccentricity.</p>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Method</h2>
+  <div class="narrow">
+    <p>GSTN convolves an image with a bank of multi-scale pyramid filters at every combination of orientation, phase, scale, and color. Each filtered output is treated as a channel, and the pairwise correlations between all channels form a Gram matrix. Its upper triangle (28,929 statistics) is the texture representation. New textures are synthesized by optimizing a noise image until its statistics match the target's.</p>
+  </div>
+  <figure>
+    <a class="zoom" href="static/images/fig1_overview.jpg"><img loading="lazy" src="static/images/fig1_overview.jpg" alt="Diagram. Left: analysis-by-synthesis pipeline from target texture through pyramid filters, pyramid images and the Gram matrix upper triangle, with synthesis by backpropagation to a noise seed. Right: feature importance module in which texture crops pass through analysis and a fully connected layer trained with contrastive learning to a reduced representation."></a>
+    <figcaption><b>Left:</b> the analysis-by-synthesis pipeline. <b>Right:</b> to learn a reduced statistics set, a single fully connected layer compresses the Gram upper triangle, trained with a contrastive loss so that crops from the same texture land close together.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap">
+  <h2>Compact, with competitive quality</h2>
+  <div class="narrow">
+    <p>GSTN improves on the classical Portilla &amp; Simoncelli pyramid model in most texture categories across all nine evaluation metrics. Against Gatys, GSTN wins on classical perceptual and structural metrics (FSIM, SSIM, VIF, GMSD, HaarPSI, PSD-L2) in 32–46 of 47 categories with a 30× smaller representation. Gatys leads on the deep-feature metrics (DISTS, LPIPS), which are built on the same VGG features its loss optimizes.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">28,929</div><div class="l">statistics in the full GSTN representation</div></div>
+    <div class="stat"><div class="n">30×</div><div class="l">fewer statistics than Gatys et al. (VGG-19 Gram)</div></div>
+    <div class="stat"><div class="n">83%</div><div class="l">fewer statistics still give acceptable syntheses (5,000 top-ranked)</div></div>
+    <div class="stat"><div class="n">&gt;50%</div><div class="l">compression relative to the input image for foveated synthesis</div></div>
+  </div>
+  <figure>
+    <a class="zoom" href="static/images/fig3_pareto.jpg"><img loading="lazy" src="static/images/fig3_pareto.jpg" alt="Five line plots of synthesis quality versus number of statistics for LPIPS, MS-SSIM, HaarPSI, FSIM and SSIM, comparing GSTN variants and depletion curves with P&amp;S, Gatys and Ustyuzhaninov."></a>
+    <figcaption><b>Representation size vs. synthesis quality</b> on 141 DTD validation textures. GSTN-zpad sits on the Pareto frontier between P&amp;S and the much larger feature-space methods. Depletion variants (top-|w|, random, bottom-|w|) extend the frontier toward smaller representations.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap">
+  <h2>An interpretable representation</h2>
+  <div class="narrow">
+    <p>Every GSTN statistic is a correlation between two known filters, so the representation can be read from first principles. We group the statistics into <b>families</b> by which filter attributes (scale, orientation, color, phase) are shared and which differ. Structured families, where only one attribute varies, roughly match the hand-curated statistics of classical pyramid models. Unstructured families correlate filters that differ in several attributes at once.</p>
+  </div>
+
+  <h3 class="narrow">Family fingerprints of texture categories</h3>
+  <figure>
+    <a class="zoom" href="static/images/fig4_fingerprints.jpg"><img loading="lazy" src="static/images/fig4_fingerprints.jpg" alt="Dendrogram of DTD categories with exemplar thumbnails above two heatmaps: per-category mean and per-category standard deviation of z-scored statistics for each family."></a>
+    <figcaption>Hierarchical clustering of per-category family signatures recovers a structured-to-smooth ordering without supervision. Single families map onto recognizable properties: <i>marginal</i> for chequered, <i>sub_magn_Xmulti</i> for lined and banded, <i>lowpass</i> for frilly and veined, and <i>highpass</i> for crosshatched.</figcaption>
+  </figure>
+
+  <h3 class="narrow">Which families matter for synthesis?</h3>
+  <figure>
+    <a class="zoom" href="static/images/fig5_ablation.jpg"><img loading="lazy" src="static/images/fig5_ablation.jpg" alt="Grid of chequered, bumpy and pleated syntheses with each statistics family dropped (top) or kept alone (bottom)."></a>
+    <figcaption><b>DROP</b> (each family removed) and <b>KEEP ONLY</b> (each family alone). No single family is sufficient. The structured families analogous to classical models (n=1,758) keep only coarse texture identity. Most synthesis-relevant information is in the cross-attribute families (<i>pass_multi</i>, <i>sub_Xmulti</i>), which classical pyramid models do not include.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap">
+  <h2>Learning which statistics matter</h2>
+  <div class="narrow">
+    <p>A single 28,929×100 linear layer trained with InfoNCE groups crops from the same texture. Ranking statistics by their learned weights gives an importance ordering: the top 5,000 statistics are enough for acceptable syntheses, and the bottom-ranked ones are not. Randomly chosen subsets of the same size do even better for synthesis. The contrastive task picks statistics that <i>discriminate</i> between textures, while synthesis needs statistics that broadly <i>constrain</i> appearance. This is the classic distinction between discriminative and generative objectives.</p>
+  </div>
+  <figure>
+    <a class="zoom" href="static/images/fig6_depletion.jpg"><img loading="lazy" src="static/images/fig6_depletion.jpg" alt="Syntheses of banded, cracked, polka-dotted and bumpy textures using the top, random, or bottom N statistics for N from 10,000 down to 100."></a>
+    <figcaption><b>Stat depletion.</b> Syntheses using only N of the 28,929 statistics, chosen as the top-N by learned importance, a random N, or the bottom-N.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap">
+  <h2>Beyond static, foveal textures</h2>
+
+  <h3 class="narrow">Peripheral (foveated) synthesis</h3>
+  <div class="narrow">
+    <p>Applying GSTN over spatial pooling regions that grow with eccentricity gives foveated syntheses like those used in peripheral-vision research. The center of gaze is rendered at high fidelity, with distortions increasing toward the edges. With the reduced 5,000-statistic set, the whole synthesis uses fewer values than the original image.</p>
+  </div>
+  <figure>
+    <a class="zoom" href="static/images/fig7_peripheral.jpg"><img loading="lazy" src="static/images/fig7_peripheral.jpg" alt="Original photo of daffodils behind a chain-link fence, a foveated synthesis using the full Gram statistics, and one using the reduced 5,000-statistic set, with zoomed insets."></a>
+    <figcaption>Original (1.2M values) vs. foveated syntheses from the full model (28,929 statistics × 115 pooling regions) and the reduced model (5,000 × 115 = 575K values).</figcaption>
+  </figure>
+
+  <h3 class="narrow" id="videos">Dynamic textures</h3>
+  <div class="narrow">
+    <p>Classical pyramid statistics have no obvious counterparts in time, but a Gram matrix needs no hand-picked statistics. Swapping the spatial filters for a bank of 3D spatiotemporal Gabor filters is enough for GSTN to synthesize video textures, using the same pipeline as for images.</p>
+  </div>
+
+  <!-- Videos: put files at static/videos/<name>_target.mp4 and static/videos/<name>_gstn.mp4
+       (H.264 MP4, ideally < 5 MB each). Missing files show a placeholder automatically. -->
+  <div class="vids">
+    <div class="vid" data-name="grass"></div>
+    <div class="vid" data-name="fire"></div>
+    <div class="vid" data-name="fence"></div>
+    <div class="vid" data-name="blooms"></div>
+    <div class="vid" data-name="tree"></div>
+  </div>
+
+  <figure>
+    <a class="zoom" href="static/images/fig8_video_slices.jpg"><img loading="lazy" src="static/images/fig8_video_slices.jpg" alt="Space-time slices for grass, fire and tree videos comparing the target, GSTN and DyNCA." style="max-width:620px;margin:0 auto"></a>
+    <figcaption style="max-width:780px;margin:10px auto 0">Space–time (x–t) slices: one row of pixels across all frames. GSTN slices vary over time much as the targets do, including fire's flicker bands. DyNCA's grass and tree slices are dominated by vertical streaks, meaning little change over time.</figcaption>
+  </figure>
+
+  <div class="narrow">
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Mean over 5 DynTex videos</th><th>GSTN</th><th>DyNCA</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="3">Deep-feature appearance</td></tr>
+          <tr><td>LPIPS-Alex ↓</td><td>0.323</td><td class="win">0.159</td></tr>
+          <tr><td>LPIPS-VGG ↓</td><td>0.515</td><td class="win">0.323</td></tr>
+          <tr><td>DISTS ↓</td><td>0.324</td><td class="win">0.199</td></tr>
+          <tr><td>FID ↓</td><td>162</td><td class="win">83</td></tr>
+          <tr><td>CMMD ↓</td><td>2.441</td><td class="win">1.339</td></tr>
+          <tr class="grp"><td colspan="3">Pixel-level</td></tr>
+          <tr><td>SSIM ↑</td><td class="win">0.114</td><td>0.107</td></tr>
+          <tr><td>MSE ↓</td><td class="win">0.044</td><td class="win">0.044</td></tr>
+          <tr><td>PSNR ↑</td><td class="win">14.2</td><td>14.1</td></tr>
+          <tr class="grp"><td colspan="3">Temporal</td></tr>
+          <tr><td>Temporal spectrum distance ↓</td><td class="win">0.176</td><td>0.518</td></tr>
+          <tr><td>|ΔCurvature| ↓</td><td class="win">12.5</td><td>17.8</td></tr>
+          <tr><td>|ΔDiversity| ↓</td><td>0.065</td><td class="win">0.037</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">DyNCA leads on deep-feature appearance metrics and diversity; GSTN leads on temporal power-spectrum match and perceptual straightness. We don't claim to beat dedicated dynamic-texture models. The point is that the same pyramid + correlation framework extends to video unchanged.</p>
+  </div>
+</section>
+
+<section class="wrap" id="bibtex">
+  <h2>BibTeX</h2>
+  <div class="narrow bib">
+    <button class="copy" type="button">Copy</button>
+<pre><code>@inproceedings{dutell2026gramstattexnet,
+  title     = {GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired
+               Texture Analysis-by-Synthesis},
+  author    = {DuTell, Vasha and Yun, Zeyu and Harrington, Anne and
+               Fang, Michael Y-S. and Hamilton, Mark and Kovesdi, Christian and
+               Adelson, Edward H. and Freeman, William T. and Rosenholtz, Ruth},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}</code></pre>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="narrow" style="font-size:14.5px;color:var(--muted)">
+    <h2 style="font-size:22px">Acknowledgments</h2>
+    <p>This work was funded by the CSAIL MEnTorEd Opportunities in Research (METEOR) Fellowship, US National Science Foundation grant 1955219, and NSF grant BCS-1826757 to PI Rosenholtz. The authors acknowledge the MIT SuperCloud and Lincoln Laboratory Supercomputing Center for providing HPC resources.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">© 2026 the authors · <a href="https://vdutell.github.io/">vdutell.github.io</a></div>
+</footer>
+
+<div id="lb" role="dialog" aria-label="Enlarged figure"><img alt=""></div>
+
+<script>
+  // Video tiles: build target / GSTN pairs; fall back to a placeholder if a file is missing.
+  document.querySelectorAll('.vid').forEach(function (el) {
+    var name = el.dataset.name;
+    el.innerHTML = '<div class="name">' + name + '</div><div class="pair"></div>' +
+                   '<div class="lab"><span>Target</span><span>GSTN</span></div>';
+    var pair = el.querySelector('.pair');
+    ['target', 'gstn'].forEach(function (kind) {
+      var src = 'static/videos/' + name + '_' + kind + '.mp4';
+      var v = document.createElement('video');
+      v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.preload = 'metadata';
+      v.src = src;
+      v.addEventListener('error', function () {
+        var ph = document.createElement('div');
+        ph.className = 'ph';
+        ph.textContent = 'add ' + src.replace('static/videos/', '');
+        v.replaceWith(ph);
+      });
+      pair.appendChild(v);
+    });
+  });
+
+  // Copy BibTeX
+  document.querySelector('.copy').addEventListener('click', function (e) {
+    var t = document.querySelector('.bib code').innerText;
+    navigator.clipboard.writeText(t).then(function () {
+      e.target.textContent = 'Copied';
+      setTimeout(function () { e.target.textContent = 'Copy'; }, 1500);
+    });
+  });
+
+  // Lightbox for figures
+  var lb = document.getElementById('lb'), lbImg = lb.querySelector('img');
+  document.querySelectorAll('a.zoom').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault(); lbImg.src = a.href; lbImg.alt = a.querySelector('img').alt; lb.classList.add('on');
+    });
+  });
+  lb.addEventListener('click', function () { lb.classList.remove('on'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lb.classList.remove('on'); });
+</script>
+</body>
+</html>
