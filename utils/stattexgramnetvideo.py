@@ -459,3 +459,8 @@ class StatTexGramNetVideo(nn.Module):
         # if(self.compress):
         #     x = self.compressor(x)
         return(x)
+
+
+# The paper calls this model GSTN / GramStatTexNetVideo. Alias it under that
+# name so either spelling works; StatTexGramNetVideo remains the definition.
+GramStatTexNetVideo = StatTexGramNetVideo

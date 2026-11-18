@@ -486,3 +486,7 @@ class StatTexGramNet(nn.Module):
             x = self.compressor(x)
         return(x)
 
+
+# The paper calls this model GSTN / GramStatTexNet. Alias it under that
+# name so either spelling works; StatTexGramNet remains the definition.
+GramStatTexNet = StatTexGramNet

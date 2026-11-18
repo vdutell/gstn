@@ -143,9 +143,3 @@ At most one of `TOP_N_STATS`, `TOP_RAND_STATS`, `COMPRESSED`, `DROP_FAMILY`,
 none set it runs the full representation. Runs resume by reading
 `synthesis_results.csv` and skipping rows marked `success`, so re-invoking a finished
 condition is cheap.
-
-## Naming
-
-The code calls the model `StatTexGramNet` / `STGN`; the paper calls it
-`GramStatTexNet` / `GSTN`. They are the same model. Figure labels use `GSTN-wrap`
-and `GSTN-zpad` for the two boundary modes (`BOUNDARY_MODE=wrap` and `black`).

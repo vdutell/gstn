@@ -1,120 +1,153 @@
 # GramStatTexNet (GSTN)
 
-Code for **GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired Texture
-Analysis-by-Synthesis** (NeurIPS 2026, spotlight).
+Texture analysis-by-synthesis from a steerable pyramid and pairwise correlations
+between its sub-bands.
 
-GSTN is a texture analysis-by-synthesis model built from a steerable pyramid and
-pairwise correlations between its sub-bands. It represents a 256×256 colour texture
-in **28,929 statistics**, every one of which names the two filters it correlates, so
-the representation can be decomposed by *statistic family* and asked which parts of
-a texture each family carries. Swapping the spatial filter bank for a bank of 3D
-spatiotemporal Gabor filters extends the same pipeline to video with no other change.
+**[Paper](docs/static/gstn_neurips2026.pdf)** &nbsp;·&nbsp;
+**[Project page](https://vdutell.github.io/gstn)** &nbsp;·&nbsp;
+**[Reproduction guide](REPRODUCE.md)** &nbsp;·&nbsp;
+**[Data](ASSETS.md)**
 
-Project page: <https://vdutell.github.io/gstn>
+*GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired Texture
+Analysis-by-Synthesis.* NeurIPS 2026 (spotlight).
 
-## Quick start
+GSTN represents a 256×256 colour texture in 28,929 statistics. Every statistic
+names the two filters it correlates, so the representation can be decomposed by
+statistic family and asked which parts of a texture each family carries. Swapping
+the spatial filter bank for a bank of 3D spatiotemporal Gabor filters extends the
+same pipeline to video with no other change.
+
+## Installation
 
 ```bash
-git clone <this repo> && cd gstn
+git clone https://github.com/vdutell/gstn.git && cd gstn
 pip install -r requirements.txt
-
-# Table 1, derived from the model itself. No data, no GPU, about a minute.
-python tables/table01_families.py
-
-# Figures 3, 10, 11 and Table 4. Also no download: the metric CSVs are in git.
-python figures/fig03_pareto.py
-python figures/fig10_percategory_vs_ps.py
-python tables/table04_efficiency.py
 ```
 
-Everything else needs the asset bundle (372 MB):
+A GPU build of PyTorch is needed to run synthesis. The figure and table scripts
+that read cached metrics run on CPU.
+
+## Usage
+
+Synthesize a texture from an image, configured through environment variables:
 
 ```bash
-bash data/fetch_assets.sh
-python figures/fig02_qualitative.py      # the qualitative comparison grid
-python figures/fig08a_video_xt.py        # video space-time slices
+BOUNDARY_MODE=black ENCODER_MODE=mean_only PRODIGY_LR=0.02 \
+  python scripts/synthesize.py
 ```
 
-Outputs go to `build/figures/` and `build/tables/`. Run scripts from the repository
-root.
+Encode an image to its 28,929 statistics:
 
-## How faithful is this?
+```python
+import torch
+import utils.stattexgramnet as gstn
 
-Ten of the rebuilt figures are **pixel-identical** to the camera-ready versions, and
-both per-category tables come out as **byte-identical** CSVs. Table 1 reproduces all
-fourteen family counts and the 28,929 total from the model's own labels.
-[REPRODUCE.md](REPRODUCE.md) gives per-figure status, and says plainly
-which scripts were not executed during packaging and what Table 6 does not
-reproduce.
+model = gstn.GramStatTexNet(
+    img_size=(256, 256), color=True, oris=4, edge_levels=6, edge_start=1,
+    batch_size=1, compress=False, boundary_mode="black", device="cuda:0",
+).to("cuda:0")
 
-## Layout
+stats = model(image)          # (B, 28929)
+families = model.stat_groups_gram_label   # family label per statistic
+```
+
+Ablate or deplete the representation by family or by learned importance:
+
+```bash
+DROP_FAMILY=sub_Xcolor python scripts/synthesize.py   # drop one family
+KEEP_FAMILIES=sub_Xori,sub_Xlevel python scripts/synthesize.py
+TOP_N_STATS=1000 python scripts/synthesize.py         # keep the top 1000
+```
+
+At most one of `TOP_N_STATS`, `TOP_RAND_STATS`, `COMPRESSED`, `DROP_FAMILY`,
+`DROP_FAMILIES`, `KEEP_FAMILIES` may be set. Runs resume from
+`synthesis_results.csv`, skipping rows marked `success`.
+
+For video, build the spatiotemporal filter bank once, then synthesize:
+
+```bash
+python scripts/build_video_filterbank.py --minimal
+python scripts/video_synthesize.py
+```
+
+## Reproducing the paper
+
+```bash
+python tables/table01_families.py      # no data, no GPU
+python figures/fig03_pareto.py         # metric CSVs are in git
+bash data/fetch_assets.sh              # 372 MB, for everything else
+python figures/fig02_qualitative.py
+```
+
+Outputs go to `build/figures/` and `build/tables/`. Run scripts from the
+repository root. See **[REPRODUCE.md](REPRODUCE.md)** for the per-figure table of
+scripts, requirements and status, and **[ASSETS.md](ASSETS.md)** for what data
+lives where and how each baseline was run.
+
+## Repository layout
 
 ```
-utils/            the model. Package layout preserved from the original working
-                  tree rather than refactored, so this is the code that produced
-                  the published numbers.
-  stattexgramnet.py       image model (StatTexGramNet)
-  stattexgramnetvideo.py  video model
-  BNPyramids.py, spyramid.py, ...  steerable pyramid
-  poolingregions.py, gazewarp.py   spatial pooling (peripheral-vision branch)
-gstn_paths.py     every path in one place, all overridable by environment variable
-figures/          one script per paper figure, named for it
-  static/         the five figures this repo does not regenerate, with provenance
-tables/           one script per paper table
-scripts/          synthesis drivers, compressor training, metrics, filter bank
-data/results/     per-image metric CSVs, in git, so quantitative figures need no download
-data/splits/      the 141- and 108-stem evaluation sets
-docs/             the project page served at vdutell.github.io/gstn
-REPRODUCE.md      per-figure reproduction status and commands
-ASSETS.md         what data lives where, and the baseline sources
+utils/                   the model
+  stattexgramnet.py        image model
+  stattexgramnetvideo.py   video model
+  BNPyramids.py            steerable pyramid
+  spyramid.py              pyramid internals
+  poolingregions.py        spatial pooling, for foveated synthesis
+gstn_paths.py            all paths, each overridable by environment variable
+figures/                 one script per paper figure
+  static/                  figures this repo does not regenerate, with provenance
+tables/                  one script per paper table
+scripts/                 synthesis, compressor training, metrics, filter bank
+data/results/            per-image metric CSVs, so most figures need no download
+data/splits/             the 141- and 108-stem evaluation sets
+docs/                    the project page
+tests/                   smoke tests
 ```
 
 ## Model configuration
 
-The published configuration is colour, 4 orientations, 6 edge levels starting at 1,
-no phase difference, magnitudes kept:
+The published configuration is colour, 4 orientations, 6 edge levels starting at
+1, no phase difference, magnitudes kept:
 
 - **240 pyramid channels** = 216 sub-band (4 orientations × 6 levels × 3 colours ×
   3 phase types) + 24 non-sub-band (3 highpass + 21 lowpass)
 - **28,920 Gram entries** = C(240,2) + 240
-- **+ 9 marginals** = **28,929 statistics**, grouped into **14 families**
+- **+ 9 marginals** = **28,929 statistics**, in **14 families**
 
 `python tables/table01_families.py` prints the breakdown and checks the total.
 
-Two configuration choices carry the published results and are easy to get wrong:
+Two settings carry the published results:
 
-- `ENCODER_MODE=mean_only` (the default). Subtracts the image mean. This beat
-  `z_score` on every metric: DISTS −11%, LPIPS −10%, SSIM +35%, MS-SSIM +74%. An
-  earlier sigmoid preprocessing was removed in favour of it.
-- `BOUNDARY_MODE` is `wrap` or `black` (zero-pad, labelled "zpad" in the figures).
-  `mean_only` + `black` is the headline configuration.
+| Variable | Value | Effect |
+|---|---|---|
+| `ENCODER_MODE` | `mean_only` (default) | Subtracts the image mean. Beat `z_score` on every metric: DISTS −11%, LPIPS −10%, SSIM +35%, MS-SSIM +74%. |
+| `BOUNDARY_MODE` | `wrap` or `black` | `black` is zero-padding, labelled `zpad` in the figures. `mean_only` + `black` is the headline configuration. |
 
-## Known limitations
+## Tests
 
-**Desaturation.** GSTN mildly desaturates chromatic targets; `pleated_0136` is the
-standing example. The cause is the encoder's global normalization: marginals computed
-on a normalized image cannot constrain absolute saturation, and cross-channel Gram
-entries capture only *relative* chroma. Three fixes were attempted and all failed.
-Disclosed as a limitation in the paper.
+```bash
+python tests/test_smoke.py      # or: python -m pytest tests/ -q
+```
 
-**The pooled branch has a bug.** In `calcgramm`, the pooled path indexes `[0]` and
-silently keeps only batch element 0. Every published result used
-`use_pooling=False`, so nothing in the paper is affected, but fix that indexing
-before enabling pooling. This is why Figure 7 ships static.
-
-## Naming
-
-The code says `StatTexGramNet` / `STGN`; the paper says `GramStatTexNet` / `GSTN`.
-Same model. The code's names were kept so that this is a faithful copy rather than a
-rename that might have changed behaviour.
+Checks that the model builds and produces 28,929 statistics in 14 families
+matching Table 1. No dataset, asset bundle or GPU required.
 
 ## Citation
+
+```bibtex
+@inproceedings{gstn2026,
+  title     = {GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired
+               Texture Analysis-by-Synthesis},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+}
+```
 
 See [CITATION.cff](CITATION.cff).
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Files in `utils/` marked as such are vendored from the
-PooledStatisticsMetamers project and carry their own MIT headers. Baseline methods
-are not redistributed as code; [ASSETS.md](ASSETS.md) records each source
-and the exact configuration used.
+MIT, see [LICENSE](LICENSE). Files in `utils/` marked as such are vendored from
+the PooledStatisticsMetamers project and carry their own MIT headers. Baseline
+methods are not redistributed as code; [ASSETS.md](ASSETS.md) records each source
+and the configuration used.
