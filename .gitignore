@@ -1,0 +1,17 @@
+# downloaded asset bundle and anything derived from it
+data/assets/
+data/dtd/
+data/gstn-assets-*.tar.gz
+
+# build outputs
+build/
+__pycache__/
+*.pyc
+
+# the video filter bank is ~7 GB and is rebuilt locally, never committed
+*.pkl
+filter_banks_*/
+
+# editor noise
+.DS_Store
+.ipynb_checkpoints/

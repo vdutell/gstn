@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "GramStatTexNet (GSTN)"
+abstract: >-
+  Texture analysis-by-synthesis from a steerable pyramid and pairwise sub-band
+  correlations, decomposable by statistic family, and extending to video by
+  swapping in a spatiotemporal filter bank.
+license: MIT
+repository-code: "https://github.com/vdutell/gstn"
+url: "https://vdutell.github.io/gstn"
+preferred-citation:
+  type: conference-paper
+  title: "GramStatTexNet: Efficient, Interpretable, and Neuro-Inspired Texture Analysis-by-Synthesis"
+  collection-title: "Advances in Neural Information Processing Systems 39 (NeurIPS 2026)"
+  year: 2026
+  authors:
+    - family-names: "REPLACE_ME"
+      given-names: "REPLACE_ME"

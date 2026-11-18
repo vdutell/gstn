@@ -1,0 +1,34 @@
+# Pinned to the versions the published results were produced with.
+# A GPU build of torch is needed to re-run synthesis; the figure and table
+# scripts that read cached metrics run fine on CPU.
+torch==2.8.0
+torchvision
+numpy
+scipy
+matplotlib
+pandas
+opencv-python
+Pillow
+scikit-image
+tqdm
+
+# perceptual metrics
+piq
+lpips
+dreamsim
+open_clip_torch
+
+# optimizers used by the synthesis drivers
+prodigyopt
+madgrad
+schedulefree
+
+# contrastive compressor training
+pytorch_metric_learning
+
+# steerable pyramid utilities
+pyrtools
+
+# video synthesis (histogram matching) and video metrics
+pytorch_histogram_matching
+torcheval
